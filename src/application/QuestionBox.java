@@ -85,7 +85,8 @@ public class QuestionBox {
         // Make testButton an easter egg (hover will change cursor)
         // see bottom for testButton.setOnMouseEntered/Exited Methods
         testButton.setOpacity(0.00); 
-        testButton.setFocusTraversable(false);
+        testButton.setFocusTraversable(true);
+        testButton.setDefaultButton(true);
         
         // When "Submit" button clicked, 
         // validate and collect user responses
