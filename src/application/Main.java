@@ -1,10 +1,6 @@
 package application;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -17,8 +13,8 @@ import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 
-/** Application scrapes text from a website and displays top10 
- *  (and all) word occurrences to a JavaFX GUI.
+/** Client side of an application which collects URL, start and end points to send to Server
+ *  which scrapes text and displays top10 (and all) word occurrences to the Client-side JavaFX GUI.
  *  @author derekdileo */
 public class Main extends Application {
 	
@@ -42,16 +38,13 @@ public class Main extends Application {
 	private String[] questionBoxPrompts = {title, instruction, siteLabel, sitePlaceholder, startLabel, startPlaceholder, endLabel, endPlaceholder};
 	
 	// QuestionBox.display now accepts a third string array to pass to an AlertBox when it launches.
-	// This enables us to provide some app instructions to the user. 
+	// This function allows app instructions to be presented to the user. 
 	private String appIntroTitle = "Welcome to Word Frequency Counter";
 	private String appIntroMessage = "For best results, right-click and inspect the text you'd like to parse. \nThen, copy and paste the elements into the start and finish boxes.";
 	private String[] appIntro = {appIntroTitle, appIntroMessage};
 	
 	// String array to hold QuestionBox.display() responses.
 	protected static String[] userResponses;
-	
-	// Local Lists and Maps to hold return values from Class methods
-	private String[] wordsArray;
 	
 	// Varibles used to show / hide text on GUI
 	private StringBuilder sbTen;
@@ -60,15 +53,6 @@ public class Main extends Application {
 	// These are accessed by the four Controller classes to print to GUI 
 	protected static String sbTenString;
 	protected static String sbAllString;
-	
-	// IO Streams for communication to / from Server
-	DataOutputStream toServer = null;
-	DataInputStream fromServer = null;
-	ByteArrayOutputStream baos = null;
-	ByteArrayInputStream bais = null;
-	
-	// Create socket for Client / Server connection
-	public static Socket socket = null;
 	
 	/** Main method calls launch() to start JavaFX GUI.
 	 *  @param args mandatory parameters for command line method call */
@@ -89,10 +73,12 @@ public class Main extends Application {
 	@Override
 	public void start(Stage primaryStage) throws UnsupportedEncodingException {
 		
+		// Connect to Server on localhost using port 8000 
 		try(Socket socket = new Socket("localhost", 8000)) {
 			
-			// Get user input for website, startLine & endLine...
+			// Get user input for website, startLine & endLine from QuestionBox
 			// Or set to default values if none are entered by user
+			// (or if hidden testButton is pressed)
 			userResponses = processUserInput();
 			
 			// This boolean is used to determine which scene is loaded 
@@ -101,15 +87,21 @@ public class Main extends Application {
 				defaultSite = true;
 			}
 			
+			// Print defaultSite value to console for troubleshooting purposes 
 			System.out.println("Default site: " + defaultSite);
 			
-			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-			PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-
-			output.println(userResponses[0]);
-			output.println(userResponses[1]);
-			output.println(userResponses[2]);
-			output.println(userResponses[3]);
+			// Wrap input stream with a buffered reader
+			BufferedReader fromServer = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			
+			// Wrap output stream with a print writer
+			// true = auto-flush output stream to ensure data is sent
+			PrintWriter toServer = new PrintWriter(socket.getOutputStream(), true);
+			
+			// Send userResponses to Server so it execute program
+			toServer.println(userResponses[0]);
+			toServer.println(userResponses[1]);
+			toServer.println(userResponses[2]);
+			toServer.println(userResponses[3]);
 			
 			// StringBuilder Object to hold Top Ten Results
 			sbTen = new StringBuilder();
@@ -117,14 +109,12 @@ public class Main extends Application {
 			// Receive Top Ten Results from Server
 			while(true) {
 
-				// Create String array to hold each line of results
-				String[] lines = null;
-				
 				// Read input from Server (likely contains more than one "line")
-				String str = input.readLine();
+				String str = fromServer.readLine();
 				
-				// Split up using "," as delimiter
-				lines = str.split(",");
+				// Create String array to hold each line of results 
+				// which are split using "," as delimiter
+				String[] lines = str.split(",");
 				
 				// Determine current size of String array
 				int size = lines.length;
@@ -142,10 +132,11 @@ public class Main extends Application {
 					sbTen.append(line + "\n");
 				} 
 				
-				// "pause" sent from Server when data transmission complete
+				// "pause..." sent from Server when data transmission complete
 				if(str.equals("pause...")) {
 					break;
 				}
+				
 			}
 			
 			// StringBuilder Object to hold All Results
@@ -153,15 +144,13 @@ public class Main extends Application {
 			
 			// Receive All Results from Server
 			while(true) {
-				
-				// Create String array to hold each line of results
-				String[] lines = null;
-				
+
 				// Read input from Server (likely contains more than one "line")
-				String str = input.readLine();
+				String str = fromServer.readLine();
 				
-				// Split up using "," as delimiter
-				lines = str.split(",");
+				// Create String array to hold each line of results 
+				// which are split using "," as delimiter
+				String[] lines = str.split(",");
 				
 				// Determine current size of String array
 				int size = lines.length;
@@ -179,10 +168,11 @@ public class Main extends Application {
 					sbAll.append(line + "\n");
 				} 
 				
-				// "pause" sent from Server when data transmission complete
+				// "pause..." sent from Server when data transmission complete
 				if(str.equals("pause...")) {
 					break;
 				}
+				
 			}
 
 			// Convert StringBuilder Objects to Strings which are called from either:
@@ -233,16 +223,11 @@ public class Main extends Application {
 	
 	/** Method calls QuestionBox to ask user for a website to parse as well as
 	 *  where the parsing should start and end.
-	 *  @return a String array with responses to pass to WebScrape.parseSite() Method. */
+	 *  @return a String array with responses (site, startPoint, endPoint) to pass to WebScrape.parseSite() Method on Server. */
 	private String[] processUserInput() {
-		// Create string array to hold QuestionBox responses (site, startPoint, endPoint).
-		String[] responses = new String[4];
 		
 		// Gather responses and return to caller
-		responses = QuestionBox.display(questionBoxPrompts, defaultEntries, appIntro);
-		
-		return responses;
-		
+		return QuestionBox.display(questionBoxPrompts, defaultEntries, appIntro);
 	}
 		
 	/** closeProgram() Method uses ConfirmBox class to confirm is user wants to quit */

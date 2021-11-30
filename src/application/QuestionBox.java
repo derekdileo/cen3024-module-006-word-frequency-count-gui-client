@@ -85,8 +85,7 @@ public class QuestionBox {
         // Make testButton an easter egg (hover will change cursor)
         // see bottom for testButton.setOnMouseEntered/Exited Methods
         testButton.setOpacity(0.00); 
-//        testButton.setFocusTraversable(true);
-//        testButton.setDefaultButton(true);
+        testButton.setFocusTraversable(true);
         
         // When "Submit" button clicked, 
         // validate and collect user responses
@@ -103,6 +102,7 @@ public class QuestionBox {
         			responses[0] = site;
         			responses[1] = start;
         			responses[2] = end;
+        			// Tells Server to stop listening for userResponses
         			responses[3] = "quit...";
         			window.close();
         		} else {
