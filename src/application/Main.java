@@ -1,6 +1,15 @@
 package application;
 
-import java.sql.ResultSet;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.Socket;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -52,17 +61,20 @@ public class Main extends Application {
 	protected static String sbTenString;
 	protected static String sbAllString;
 	
+	// IO Streams for communication to / from Server
+	DataOutputStream toServer = null;
+	DataInputStream fromServer = null;
+	ByteArrayOutputStream baos = null;
+	ByteArrayInputStream bais = null;
+	
+	// Create socket for Client / Server connection
+	public static Socket socket = null;
+	
 	/** Main method calls launch() to start JavaFX GUI.
 	 *  @param args mandatory parameters for command line method call */
 	public static void main(String[] args) {
-		// Create wordsTable if it doesn't exist
-		try {
-			Database.createWordsTable("words");
-		} catch (Exception e) {
-			System.out.println("Error creating words table in main()!");
-			System.out.println(e.getMessage());
-			e.printStackTrace();
-		}
+		// Create wordsTable if it doesn't exist?
+		// Server side should handle this functionality. 
 		launch();
 	}
 	
@@ -72,164 +84,166 @@ public class Main extends Application {
 	
 	/** The start method (which is called on the JavaFX Application Thread) 
 	 * is the entry point for this application and is called after the init 
-	 * method has returned- most of the application logic takes place here. */
+	 * method has returned- most of the application logic takes place here. 
+	 * @throws UnsupportedEncodingException */
 	@Override
-	public void start(Stage primaryStage) {
+	public void start(Stage primaryStage) throws UnsupportedEncodingException {
 		
-		// Get user input for website, startLine & endLine...
-		// Or set to default values if none are entered by user
-		userResponses = processUserInput();
-		
-		// This boolean is used to determine which scene is loaded 
-		// (with or without EAP's The Raven graphic elements) 
-		if (userResponses[0].equals(defaultWebsite)) {
-			defaultSite = true;
-		}
-		
-		// String array created by WebScrape.parseSite() 
-		// which contains every word (and multiples)
-		wordsArray = WebScrape.parseSite(userResponses[0], userResponses[1], userResponses[2]);
-		
-		// Process wordsArray and push to database. 
-		// If word exists, increment its frequency
-		WebScrape.wordsToDB(wordsArray);
-		
-		// SELECT * FROM words ORDER BY DESC and return ResultSet
-		ResultSet results = Database.getResults();
-		
-		// Push results to GUI
-		displayResults(results);
-		
-		// Rename stage to window for sanity
-		window = primaryStage;
-		
-		// Set stage title
-		window.setTitle("Word Frequency Analyzer");
-		
-		// Handle close button request. 
-		// Launch ConfirmBox to confirm if user wishes to quit
-		window.setOnCloseRequest(e -> {
-			// Consume the event to allow closeProgram() to do its job
-			e.consume();
-			closeProgram();
-		});
-		
-		try {
-			if (defaultSite) {
-				BorderPane root = (BorderPane)FXMLLoader.load(getClass().getResource("Main.fxml"));				
-				Scene scene = new Scene(root,800,600);
-				scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-				window.setScene(scene);
-				window.show();
-			} else {
-				BorderPane root = (BorderPane)FXMLLoader.load(getClass().getResource("MainDefault.fxml"));				
-				Scene scene = new Scene(root,800,600);
-				scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
-				window.setScene(scene);
-				window.show();
+		try(Socket socket = new Socket("localhost", 8000)) {
+			
+			// Get user input for website, startLine & endLine...
+			// Or set to default values if none are entered by user
+			userResponses = processUserInput();
+			
+			// This boolean is used to determine which scene is loaded 
+			// (with or without EAP's The Raven graphic elements) 
+			if (userResponses[0].equals(defaultWebsite)) {
+				defaultSite = true;
 			}
-		} catch(Exception e) {
+			
+			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+
+			output.println(userResponses[0]);
+//			System.out.println(input.readLine());
+			output.println(userResponses[1]);
+//			System.out.println(input.readLine());
+			output.println(userResponses[2]);
+//			System.out.println(input.readLine());
+			output.println(userResponses[3]);
+//			System.out.println(input.readLine());
+			
+			// StringBuilder Object to hold Top Ten Results
+			sbTen = new StringBuilder();
+			
+			// Receive Top Ten Results from Server
+			while(true) {
+
+				// Create String array to hold each line of results
+				String[] lines = null;
+				
+				// Read input from Server (likely contains more than one "line")
+				String str = input.readLine();
+				
+				// Split up using "," as delimiter
+				lines = str.split(",");
+				
+				// Determine current size of String array
+				int size = lines.length;
+				
+				// Search for and remove "pause" if part of current readLine()
+				for (int i = 0; i < size; i ++) {
+					if(lines[i].equals("pause")) {
+						lines[i] = "";
+					}
+				} 
+				
+				// Remove commas, add each line to sbAll
+				for (String line : lines) {
+					line.replace(",", "\n\n");
+					sbTen.append(line + "\n");
+				} 
+				
+				// "pause" sent from Server when data transmission complete
+				if(str.equals("pause")) {
+					break;
+				}
+			}
+			
+			// StringBuilder Object to hold All Results
+			sbAll = new StringBuilder();
+			
+			// Receive All Results from Server
+			while(true) {
+				
+				// Create String array to hold each line of results
+				String[] lines = null;
+				
+				// Read input from Server (likely contains more than one "line")
+				String str = input.readLine();
+				
+				// Split up using "," as delimiter
+				lines = str.split(",");
+				
+				// Determine current size of String array
+				int size = lines.length;
+				
+				// Search for and remove "pause" if part of current readLine()
+				for (int i = 0; i < size; i ++) {
+					if(lines[i].equals("pause")) {
+						lines[i] = "";
+					}
+				} 
+				
+				// Remove commas, add each line to sbAll
+				for (String line : lines) {
+					line.replace(",", "\n\n");
+					sbAll.append(line + "\n");
+				} 
+				
+				// "pause" sent from Server when data transmission complete
+				if(str.equals("pause")) {
+					break;
+				}
+			}
+
+			// Convert StringBuilder Objects to Strings which are called from either:
+			// MainC-, MainDefaultC-, AllResultsC- or AllResultsDefaultC- ontrollers to push to GUI
+			sbTenString = sbTen.toString();
+			sbAllString = sbAll.toString();
+			
+			// Rename stage to window for sanity
+			window = primaryStage;
+			
+			// Set stage title
+			window.setTitle("Word Frequency Analyzer");
+			
+			// Handle close button request. 
+			// Launch ConfirmBox to confirm if user wishes to quit
+			window.setOnCloseRequest(e -> {
+				// Consume the event to allow closeProgram() to do its job
+				e.consume();
+				closeProgram();
+			});
+			
+			// Load GUI
+			try {
+				if (defaultSite) {
+					BorderPane root = (BorderPane)FXMLLoader.load(getClass().getResource("Main.fxml"));				
+					Scene scene = new Scene(root,800,600);
+					scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+					window.setScene(scene);
+					window.show();
+				} else {
+					BorderPane root = (BorderPane)FXMLLoader.load(getClass().getResource("MainDefault.fxml"));				
+					Scene scene = new Scene(root,800,600);
+					scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
+					window.setScene(scene);
+					window.show();
+				}
+			} catch(Exception e) {
+				System.out.println("Cannot execute Client window.show()");
+				e.printStackTrace();
+			}
+			
+		} catch (IOException e) {
+			System.out.println("Error in Client Socket");
 			e.printStackTrace();
 		}
 		
 	}
-
+	
 	/** Method calls QuestionBox to ask user for a website to parse as well as
 	 *  where the parsing should start and end.
 	 *  @return a String array with responses to pass to WebScrape.parseSite() Method. */
 	private String[] processUserInput() {
 		// Create string array to hold QuestionBox responses (site, startPoint, endPoint).
-		String[] responses = new String[3];
+		String[] responses = new String[4];
 		
 		// Gather responses and return to caller
 		responses = QuestionBox.display(questionBoxPrompts, defaultEntries, appIntro);
+		
 		return responses;
-		
-	}
-	
-	/** Method to convert printed database contents to topTen and All windows on JavaFX GUI.
-	 *  @param rs is the ResultSet returned from Database.getResults() method. */
-	private void displayResults(ResultSet rs) {
-		try {
-			// Build a string of top 10 results to push to Main.fxml GUI
-			sbTen = new StringBuilder();
-			sbTen.append("Top Ten Results\n\n");
-			
-			// Build a string of all results to push to AllResults.fxml GUI
-			sbAll = new StringBuilder();
-			sbAll.append("All Results\n\n");
-			
-			// Variables for buildString()
-			String word = null;
-			int frequency = 0;
-			int wordCount = 0;
-			
-			// Scan through result set
-			while(rs.next()) {
-				word = rs.getString(1);
-				frequency = rs.getInt(2);
-			
-				String line = buildString(word, frequency, wordCount);
-			
-				// Handle top10 and all results lists
-				if (wordCount < 10) {
-					sbTen.append(line);
-					sbAll.append(line);
-				} else {
-					sbAll.append(line);
-				}
-				
-				wordCount++;
-				
-			}
-			
-			// Save results to String variables which are called from either:
-			// MainC-, MainDefaultC-, AllResultsC- or AllResultsDefaultC- ontrollers to push to GUI
-			sbTenString = sbTen.toString();
-			sbAllString = sbAll.toString();
-		
-			rs.close();
-		} catch (Exception e) {
-			System.out.println("Exception in Main.displayResults()" + e.getMessage());
-			e.printStackTrace();
-		}
-		
-	}
-	
-	/** Method to create a string for each word/frequency set in database which uses \t to account for word size 
-	 *  and places a blank space before the numbers 1-9 in order to make top10 results more uniform.
-	 *  @param word is the word pulled from the database.
-	 *  @param frequency is the number of times the word occurred on the parsed site.
-	 *  @param count keeps track of the position in the list (which is in descending order by frequency). 
-	 *  @return String to append to StringBuilder for top10 and/or all results which is pushed to GUI. */
-	private String buildString(String word, int frequency, int count) {
-		
-		int size = word.length();
-		
-		// Add a space before numbers 1-9 to make top10 list appear more uniform
-		if (count < 9) {
-			// An attempt to make the word / frequency printouts more uniform, regardless of word length
-			if(size <= 4) {
-				return "\n " + (count + 1) + ") Word: " + word + "\t\t\t\tFrequency: " + frequency;
-			} else if (size > 4 && size <= 11) {
-				return "\n " + (count + 1) + ") Word: " + word + "\t\t\tFrequency: " + frequency;
-			} else if (size > 11 && size <= 13){
-				return "\n " + (count + 1) + ") Word: " + word + "\t\tFrequency: " + frequency;
-			} else {
-				return "\n " + (count + 1) + ") Word: " + word + "\tFrequency: " + frequency;
-			}
-		} else {
-			if(size <= 4) {
-				return "\n" + (count + 1) + ") Word: " + word + "\t\t\t\tFrequency: " + frequency;
-			} else if (size > 4 && size <= 11) {
-				return "\n" + (count + 1) + ") Word: " + word + "\t\t\tFrequency: " + frequency;
-			} else if (size > 11 && size <= 13){
-				return "\n" + (count + 1) + ") Word: " + word + "\t\tFrequency: " + frequency;
-			} else {
-				return "\n" + (count + 1) + ") Word: " + word + "\tFrequency: " + frequency;
-			}
-		
-		}
 		
 	}
 		
@@ -239,17 +253,8 @@ public class Main extends Application {
        Boolean answer = ConfirmBox.display("", "Are you sure you want to quit?");
        if (answer) {
            // Run any necessary code before window closes:
-		   try {
-	    		// Drop and re-create words table
-				Database.deleteTable("words");
-				Database.createWordsTable("words");
-				System.out.println("Window Closed!");
-				window.close();
-		   } catch (Exception e) {
-			   System.out.println(e.getMessage());
-			   e.printStackTrace();
-		   }
-    	   
+		   System.out.println("Window Closed!");
+		   window.close();
        }
        
 	}

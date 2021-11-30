@@ -29,7 +29,6 @@ public class AlertBox {
         window.setMinWidth(250);
         window.setMinHeight(100);
 
-        // Ask user for fibonacci position (positive integers only!)
         Label label = new Label();
         label.setText(message);
 

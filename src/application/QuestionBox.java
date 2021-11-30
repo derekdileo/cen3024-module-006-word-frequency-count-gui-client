@@ -24,7 +24,7 @@ import javafx.stage.Stage;
 public class QuestionBox {
 
     // Define String array to be returned to caller
-    protected static String[] responses = new String[3];
+    protected static String[] responses = new String[4];
     
     /** Method that asks the user a question and returns a String of either their response or, if left
      *  blank, a default response which in passed from the caller. 
@@ -102,6 +102,7 @@ public class QuestionBox {
         			responses[0] = site;
         			responses[1] = start;
         			responses[2] = end;
+        			responses[3] = "quit";
         			window.close();
         		} else {
         			AlertBox.display("Error", "Start/Finish fields cannot be left blank.");
@@ -125,6 +126,7 @@ public class QuestionBox {
             responses[0] = defaultEntries[0];
             responses[1] = defaultEntries[1];
             responses[2] = defaultEntries[2];
+            responses[3] = "quit";
             window.close();
         });
         
