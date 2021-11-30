@@ -101,17 +101,15 @@ public class Main extends Application {
 				defaultSite = true;
 			}
 			
+			System.out.println("Default site: " + defaultSite);
+			
 			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
 
 			output.println(userResponses[0]);
-//			System.out.println(input.readLine());
 			output.println(userResponses[1]);
-//			System.out.println(input.readLine());
 			output.println(userResponses[2]);
-//			System.out.println(input.readLine());
 			output.println(userResponses[3]);
-//			System.out.println(input.readLine());
 			
 			// StringBuilder Object to hold Top Ten Results
 			sbTen = new StringBuilder();
@@ -133,7 +131,7 @@ public class Main extends Application {
 				
 				// Search for and remove "pause" if part of current readLine()
 				for (int i = 0; i < size; i ++) {
-					if(lines[i].equals("pause")) {
+					if(lines[i].equals("pause...")) {
 						lines[i] = "";
 					}
 				} 
@@ -145,7 +143,7 @@ public class Main extends Application {
 				} 
 				
 				// "pause" sent from Server when data transmission complete
-				if(str.equals("pause")) {
+				if(str.equals("pause...")) {
 					break;
 				}
 			}
@@ -170,7 +168,7 @@ public class Main extends Application {
 				
 				// Search for and remove "pause" if part of current readLine()
 				for (int i = 0; i < size; i ++) {
-					if(lines[i].equals("pause")) {
+					if(lines[i].equals("pause...")) {
 						lines[i] = "";
 					}
 				} 
@@ -182,7 +180,7 @@ public class Main extends Application {
 				} 
 				
 				// "pause" sent from Server when data transmission complete
-				if(str.equals("pause")) {
+				if(str.equals("pause...")) {
 					break;
 				}
 			}

@@ -85,8 +85,8 @@ public class QuestionBox {
         // Make testButton an easter egg (hover will change cursor)
         // see bottom for testButton.setOnMouseEntered/Exited Methods
         testButton.setOpacity(0.00); 
-        testButton.setFocusTraversable(true);
-        testButton.setDefaultButton(true);
+//        testButton.setFocusTraversable(true);
+//        testButton.setDefaultButton(true);
         
         // When "Submit" button clicked, 
         // validate and collect user responses
@@ -103,7 +103,7 @@ public class QuestionBox {
         			responses[0] = site;
         			responses[1] = start;
         			responses[2] = end;
-        			responses[3] = "quit";
+        			responses[3] = "quit...";
         			window.close();
         		} else {
         			AlertBox.display("Error", "Start/Finish fields cannot be left blank.");
@@ -127,7 +127,7 @@ public class QuestionBox {
             responses[0] = defaultEntries[0];
             responses[1] = defaultEntries[1];
             responses[2] = defaultEntries[2];
-            responses[3] = "quit";
+            responses[3] = "quit...";
             window.close();
         });
         
