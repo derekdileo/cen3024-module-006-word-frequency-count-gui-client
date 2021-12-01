@@ -225,7 +225,6 @@ public class Main extends Application {
 	 *  where the parsing should start and end.
 	 *  @return a String array with responses (site, startPoint, endPoint) to pass to WebScrape.parseSite() Method on Server. */
 	private String[] processUserInput() {
-		
 		// Gather responses and return to caller
 		return QuestionBox.display(questionBoxPrompts, defaultEntries, appIntro);
 	}
