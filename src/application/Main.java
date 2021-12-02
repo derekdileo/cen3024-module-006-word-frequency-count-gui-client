@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
@@ -75,6 +76,9 @@ public class Main extends Application {
 		
 		// Connect to Server on localhost using port 8000 
 		try(Socket socket = new Socket("localhost", 8000)) {
+			
+			// Set ten second timeout value
+			socket.setSoTimeout(10000);
 			
 			// Get user input for website, startLine & endLine from QuestionBox
 			// Or set to default values if none are entered by user
@@ -217,7 +221,9 @@ public class Main extends Application {
 				// associated with this Client
 				toServer.println("exit...");
 			}
-			
+		} catch (SocketTimeoutException e) {
+			System.out.println("The Socket timed out: " + e.getMessage());
+			e.printStackTrace();
 		} catch (IOException e) {
 			System.out.println("Error in Client Socket");
 			e.printStackTrace();
