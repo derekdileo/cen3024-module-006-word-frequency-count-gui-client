@@ -103,6 +103,20 @@ public class Main extends Application {
 			toServer.println(userResponses[2]);
 			toServer.println(userResponses[3]);
 			
+			// Rename stage to window for sanity
+			window = primaryStage;
+			
+			// Set stage title
+			window.setTitle("Word Frequency Analyzer");
+			
+			// Handle close button request. 
+			// Launch ConfirmBox to confirm if user wishes to quit
+			window.setOnCloseRequest(e -> {
+				// Consume the event to allow closeProgram() to do its job
+				e.consume();
+				closeProgram();
+			});
+			
 			// StringBuilder Object to hold Top Ten Results
 			sbTen = new StringBuilder();
 			
@@ -180,20 +194,6 @@ public class Main extends Application {
 			sbTenString = sbTen.toString();
 			sbAllString = sbAll.toString();
 			
-			// Rename stage to window for sanity
-			window = primaryStage;
-			
-			// Set stage title
-			window.setTitle("Word Frequency Analyzer");
-			
-			// Handle close button request. 
-			// Launch ConfirmBox to confirm if user wishes to quit
-			window.setOnCloseRequest(e -> {
-				// Consume the event to allow closeProgram() to do its job
-				e.consume();
-				closeProgram();
-			});
-			
 			// Load GUI
 			try {
 				if (defaultSite) {
@@ -212,12 +212,16 @@ public class Main extends Application {
 			} catch(Exception e) {
 				System.out.println("Cannot execute Client window.show()");
 				e.printStackTrace();
+			} finally {
+				// Tell Server to drop database table
+				// associated with this Client
+				toServer.println("exit...");
 			}
 			
 		} catch (IOException e) {
 			System.out.println("Error in Client Socket");
 			e.printStackTrace();
-		}
+		} 
 		
 	}
 	
